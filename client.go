@@ -18,7 +18,7 @@ import (
 	"time"
 
 	"github.com/andybalholm/brotli"
-	"github.com/dop251/goja"
+	"github.com/grafana/sobek"
 	"github.com/klauspost/compress/zstd"
 	"go.k6.io/k6/js/common"
 	k6http "go.k6.io/k6/js/modules/k6/http"
@@ -41,8 +41,8 @@ type Client struct {
 }
 
 // Request makes an http request of the provided `method` and returns a corresponding response by
-// taking goja.Values as arguments
-func (c *Client) Request(method string, url goja.Value, args ...goja.Value) (*Response, error) {
+// taking sobek.Values as arguments
+func (c *Client) Request(method string, url sobek.Value, args ...sobek.Value) (*Response, error) {
 	state := c.moduleInstance.vu.State()
 	if state == nil {
 		return nil, ErrHTTPForbiddenInInitContext
@@ -64,7 +64,7 @@ func (c *Client) Request(method string, url goja.Value, args ...goja.Value) (*Re
 
 // processResponse stores the body as an ArrayBuffer if indicated by
 // respType. This is done here instead of in httpext.readResponseBody to avoid
-// a reverse dependency on js/common or goja.
+// a reverse dependency on js/common or sobek.
 func (c *Client) processResponse(resp *httpext.Response, respType httpext.ResponseType) {
 	if respType == httpext.ResponseTypeBinary && resp.Body != nil {
 		resp.Body = c.moduleInstance.vu.Runtime().NewArrayBuffer(resp.Body.([]byte))
@@ -272,7 +272,7 @@ func readResponseBody(
 		// Copy the data to a new slice before we return the buffer to the pool,
 		// because buf.Bytes() points to the underlying buffer byte slice.
 		// The ArrayBuffer wrapping will be done in the js/modules/k6/http
-		// package to avoid a reverse dependency, since it depends on goja.
+		// package to avoid a reverse dependency, since it depends on sobek.
 		binData := make([]byte, buf.Len())
 		copy(binData, buf.Bytes())
 		result = binData
@@ -283,7 +283,7 @@ func readResponseBody(
 	return result, respErr
 }
 
-func splitRequestArgs(args []goja.Value) (body interface{}, params goja.Value) {
+func splitRequestArgs(args []sobek.Value) (body interface{}, params sobek.Value) {
 	if len(args) > 0 {
 		body = args[0].Export()
 	}
@@ -313,7 +313,7 @@ func (c *Client) handleParseRequestError(err error) (*Response, error) {
 //
 //nolint:gocyclo, cyclop, funlen, gocognit
 func (c *Client) parseRequest(
-	method string, reqURL, body interface{}, params goja.Value,
+	method string, reqURL, body interface{}, params sobek.Value,
 ) (*httpext.ParsedHTTPRequest, error) {
 	rt := c.moduleInstance.vu.Runtime()
 	state := c.moduleInstance.vu.State()
@@ -321,7 +321,7 @@ func (c *Client) parseRequest(
 		return nil, ErrHTTPForbiddenInInitContext
 	}
 
-	if urlJSValue, ok := reqURL.(goja.Value); ok {
+	if urlJSValue, ok := reqURL.(sobek.Value); ok {
 		reqURL = urlJSValue.Export()
 	}
 	u, err := httpext.ToURL(reqURL)
@@ -423,7 +423,7 @@ func (c *Client) parseRequest(
 
 	if body != nil {
 		switch data := body.(type) {
-		case map[string]goja.Value:
+		case map[string]sobek.Value:
 			// TODO: fix forms submission and serialization in k6/html before fixing this..
 			newData := map[string]interface{}{}
 			for k, v := range data {
@@ -432,7 +432,7 @@ func (c *Client) parseRequest(
 			if err := handleObjectBody(newData); err != nil {
 				return nil, err
 			}
-		case goja.ArrayBuffer:
+		case sobek.ArrayBuffer:
 			result.Body = bytes.NewBuffer(data.Bytes())
 		case map[string]interface{}:
 			if err := handleObjectBody(data); err != nil {
@@ -453,14 +453,14 @@ func (c *Client) parseRequest(
 		result.ActiveJar = state.CookieJar
 	}
 
-	// TODO: ditch goja.Value, reflections and Object and use a simple go map and type assertions?
-	if params != nil && !goja.IsUndefined(params) && !goja.IsNull(params) {
+	// TODO: ditch sobek.Value, reflections and Object and use a simple go map and type assertions?
+	if params != nil && !sobek.IsUndefined(params) && !sobek.IsNull(params) {
 		params := params.ToObject(rt)
 		for _, k := range params.Keys() {
 			switch k {
 			case "cookies":
 				cookiesV := params.Get(k)
-				if goja.IsUndefined(cookiesV) || goja.IsNull(cookiesV) {
+				if sobek.IsUndefined(cookiesV) || sobek.IsNull(cookiesV) {
 					continue
 				}
 				cookies := cookiesV.ToObject(rt)
@@ -469,7 +469,7 @@ func (c *Client) parseRequest(
 				}
 				for _, key := range cookies.Keys() {
 					cookieV := cookies.Get(key)
-					if goja.IsUndefined(cookieV) || goja.IsNull(cookieV) {
+					if sobek.IsUndefined(cookieV) || sobek.IsNull(cookieV) {
 						continue
 					}
 					switch cookieV.ExportType() {
@@ -490,7 +490,7 @@ func (c *Client) parseRequest(
 				}
 			case "headers":
 				headersV := params.Get(k)
-				if goja.IsUndefined(headersV) || goja.IsNull(headersV) {
+				if sobek.IsUndefined(headersV) || sobek.IsNull(headersV) {
 					continue
 				}
 				headers := headersV.ToObject(rt)
@@ -506,7 +506,7 @@ func (c *Client) parseRequest(
 				}
 			case "jar":
 				jarV := params.Get(k)
-				if goja.IsUndefined(jarV) || goja.IsNull(jarV) {
+				if sobek.IsUndefined(jarV) || sobek.IsNull(jarV) {
 					continue
 				}
 				switch v := jarV.Export().(type) {

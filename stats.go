@@ -79,50 +79,53 @@ func (mh *metricHandler) sendMetrics(streamID int64) {
 	http3ReqWaiting := streamMetrics.responseStart.Sub(streamMetrics.requestFin)
 	http3ReqReceiving := streamMetrics.responseFin.Sub(streamMetrics.responseStart)
 
+	state := mh.vu.State()
+	commonTagsAndMeta := state.Tags.GetCurrentValues()
+
 	samples := metrics.ConnectedSamples{
 		Samples: []metrics.Sample{
 			{
 				TimeSeries: metrics.TimeSeries{
 					Metric: mh.metrics.HTTP3ReqDuration,
-					Tags:   nil,
+					Tags:   commonTagsAndMeta.Tags,
 				},
-				Metadata: nil,
+				Metadata: commonTagsAndMeta.Metadata,
 				Time:     streamMetrics.responseFin,
 				Value:    metrics.D(http3ReqDuration),
 			},
 			{
 				TimeSeries: metrics.TimeSeries{
 					Metric: mh.metrics.HTTP3ReqSending,
-					Tags:   nil,
+					Tags:   commonTagsAndMeta.Tags,
 				},
-				Metadata: nil,
+				Metadata: commonTagsAndMeta.Metadata,
 				Time:     streamMetrics.requestFin,
 				Value:    metrics.D(http3ReqSending),
 			},
 			{
 				TimeSeries: metrics.TimeSeries{
 					Metric: mh.metrics.HTTP3ReqWaiting,
-					Tags:   nil,
+					Tags:   commonTagsAndMeta.Tags,
 				},
-				Metadata: nil,
+				Metadata: commonTagsAndMeta.Metadata,
 				Time:     streamMetrics.responseStart,
 				Value:    metrics.D(http3ReqWaiting),
 			},
 			{
 				TimeSeries: metrics.TimeSeries{
 					Metric: mh.metrics.HTTP3ReqReceiving,
-					Tags:   nil,
+					Tags:   commonTagsAndMeta.Tags,
 				},
-				Metadata: nil,
+				Metadata: commonTagsAndMeta.Metadata,
 				Time:     streamMetrics.responseFin,
 				Value:    metrics.D(http3ReqReceiving),
 			},
 			{
 				TimeSeries: metrics.TimeSeries{
 					Metric: mh.metrics.HTTP3Reqs,
-					Tags:   nil,
+					Tags:   commonTagsAndMeta.Tags,
 				},
-				Metadata: nil,
+				Metadata: commonTagsAndMeta.Metadata,
 				Time:     streamMetrics.responseFin,
 				Value:    1,
 			},
@@ -150,7 +153,7 @@ func (mh *metricHandler) handleFramesReceived(frames []logging.Frame) {
 				}
 				if f.Fin {
 					streamMetrics.responseFin = time.Now()
-					mh.sendMetrics(streamID)
+					// mh.sendMetrics(streamID)
 				}
 			}
 		}

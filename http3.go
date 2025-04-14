@@ -9,12 +9,12 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/dop251/goja"
+	"github.com/grafana/sobek"
 	"github.com/quic-go/quic-go"
 	quichttp3 "github.com/quic-go/quic-go/http3"
 	"github.com/quic-go/quic-go/logging"
 	"github.com/quic-go/quic-go/qlog"
-	"go.k6.io/k6/event"
+
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/js/modules"
 )
@@ -30,7 +30,7 @@ type (
 		vu      modules.VU
 		metrics *HTTP3Metrics
 		client  *Client
-		exports *goja.Object
+		exports *sobek.Object
 	}
 )
 
@@ -45,7 +45,7 @@ func New() *RootModule {
 
 func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	rt := vu.Runtime()
-	sub, ch := vu.Events().Global.Subscribe(event.TestEnd)
+	// sub, ch := vu.Events().Global.Subscribe(eventloop.EventLoop.)
 
 	metrics, err := RegisterMetrics(vu)
 	if err != nil {
@@ -58,36 +58,27 @@ func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 		exports: rt.NewObject(),
 	}
 
-	go func() {
-		ev := <-ch
-		if mi.client != nil {
-			mi.client.client.Transport.(*quichttp3.RoundTripper).Close()
-		}
-		ev.Done()
-		vu.Events().Global.Unsubscribe(sub)
-	}()
-
 	mustExport := func(name string, value interface{}) {
 		if err := mi.exports.Set(name, value); err != nil {
 			common.Throw(rt, err)
 		}
 	}
 
-	getMethodClosure := func(method string) func(url goja.Value, args ...goja.Value) (*Response, error) {
-		return func(url goja.Value, args ...goja.Value) (*Response, error) {
+	getMethodClosure := func(method string) func(url sobek.Value, args ...sobek.Value) (*Response, error) {
+		return func(url sobek.Value, args ...sobek.Value) (*Response, error) {
 			return mi.getClient().Request(method, url, args...)
 		}
 	}
-	mustExport("get", func(url goja.Value, args ...goja.Value) (*Response, error) {
+	mustExport("get", func(url sobek.Value, args ...sobek.Value) (*Response, error) {
 		// http3.get(url, params) doesn't have a body argument, so we add undefined
 		// as the third argument to http.request(method, url, body, params)
-		args = append([]goja.Value{goja.Undefined()}, args...)
+		args = append([]sobek.Value{sobek.Undefined()}, args...)
 		return mi.getClient().Request(http.MethodGet, url, args...)
 	})
-	mustExport("head", func(url goja.Value, args ...goja.Value) (*Response, error) {
+	mustExport("head", func(url sobek.Value, args ...sobek.Value) (*Response, error) {
 		// http3.head(url, onStreamCompletedImplparams) doesn't have a body argument, so we add undefined
 		// as the third argument to http.request(method, url, body, params)
-		args = append([]goja.Value{goja.Undefined()}, args...)
+		args = append([]sobek.Value{sobek.Undefined()}, args...)
 		return mi.getClient().Request(http.MethodHead, url, args...)
 	})
 	mustExport("post", getMethodClosure(http.MethodPost))
@@ -95,7 +86,7 @@ func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	mustExport("patch", getMethodClosure(http.MethodPatch))
 	mustExport("del", getMethodClosure(http.MethodDelete))
 	mustExport("options", getMethodClosure(http.MethodOptions))
-	mustExport("request", func(method string, url goja.Value, args ...goja.Value) (*Response, error) {
+	mustExport("request", func(method string, url sobek.Value, args ...sobek.Value) (*Response, error) {
 		return mi.getClient().Request(method, url, args...)
 	})
 	return mi

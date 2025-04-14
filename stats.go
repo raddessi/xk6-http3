@@ -1,12 +1,21 @@
 package http3
 
-// type HTTP3Metrics struct {
-// 	HTTP3ReqDuration  *metrics.Metric
-// 	HTTP3ReqSending   *metrics.Metric
-// 	HTTP3ReqWaiting   *metrics.Metric
-// 	HTTP3ReqReceiving *metrics.Metric
-// 	HTTP3Reqs         *metrics.Metric
-// }
+import (
+	"net"
+	"time"
+
+	"github.com/quic-go/quic-go/logging"
+	"go.k6.io/k6/js/modules"
+	"go.k6.io/k6/metrics"
+)
+
+type HTTP3Metrics struct {
+	HTTP3ReqDuration  *metrics.Metric
+	HTTP3ReqSending   *metrics.Metric
+	HTTP3ReqWaiting   *metrics.Metric
+	HTTP3ReqReceiving *metrics.Metric
+	HTTP3Reqs         *metrics.Metric
+}
 
 const (
 	HTTP3ReqDurationName  = "http3_req_duration"
@@ -16,19 +25,20 @@ const (
 	HTTP3ReqsName         = "http3_reqs"
 )
 
-// type streamMetrics struct {
-// 	requestStart  time.Time
-// 	requestFin    time.Time
-// 	responseStart time.Time
-// 	responseFin   time.Time
-// 	receivedBytes int
-// 	sentBytes     int
-// }
-// type metricHandler struct {
-// 	vu      modules.VU
-// 	metrics *HTTP3Metrics
-// 	streams map[int64]*streamMetrics
-// }
+type streamMetrics struct {
+	requestStart  time.Time
+	requestFin    time.Time
+	responseStart time.Time
+	responseFin   time.Time
+	receivedBytes int
+	sentBytes     int
+}
+
+type metricHandler struct {
+	vu      modules.VU
+	metrics *HTTP3Metrics
+	streams map[int64]*streamMetrics
+}
 
 // func RegisterMetrics(vu modules.VU) (*HTTP3Metrics, error) {
 // 	var err error
@@ -124,9 +134,9 @@ const (
 // 	mh.vu.State().Samples <- samples
 // }
 
-// func (mh *metricHandler) ConnectionStarted(t time.Time) {
-// 	//TODO: Handle it
-// }
+func (mh *metricHandler) ConnectionStarted(t time.Time) {
+	//TODO: Handle it
+}
 
 // func (mh *metricHandler) handleFramesReceived(frames []logging.Frame) {
 // 	for _, frame := range frames {
@@ -204,28 +214,28 @@ const (
 // 	metrics.PushIfNotDone(mh.vu.Context(), mh.vu.State().Samples, sample)
 // }
 
-// func NewTracer(vu modules.VU, http3Metrics *HTTP3Metrics) *logging.ConnectionTracer {
-// 	mh := &metricHandler{
-// 		vu:      vu,
-// 		metrics: http3Metrics,
-// 		streams: make(map[int64]*streamMetrics),
-// 	}
+func NewTracer(vu modules.VU, http3Metrics *HTTP3Metrics) *logging.ConnectionTracer {
+	mh := &metricHandler{
+		vu:      vu,
+		metrics: http3Metrics,
+		streams: make(map[int64]*streamMetrics),
+	}
 
-// 	return &logging.ConnectionTracer{
-// 		StartedConnection: func(local, remote net.Addr, srcConnID, destConnID logging.ConnectionID) {
-// 			mh.ConnectionStarted(time.Now())
-// 		},
-// 		ReceivedLongHeaderPacket: func(eh *logging.ExtendedHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
-// 			mh.PacketReceived(bc, f)
-// 		},
-// 		ReceivedShortHeaderPacket: func(sh *logging.ShortHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
-// 			mh.PacketReceived(bc, f)
-// 		},
-// 		SentLongHeaderPacket: func(eh *logging.ExtendedHeader, bc logging.ByteCount, e logging.ECN, af *logging.AckFrame, f []logging.Frame) {
-// 			mh.PacketSent(bc, f)
-// 		},
-// 		SentShortHeaderPacket: func(sh *logging.ShortHeader, bc logging.ByteCount, e logging.ECN, af *logging.AckFrame, f []logging.Frame) {
-// 			mh.PacketSent(bc, f)
-// 		},
-// 	}
-// }
+	return &logging.ConnectionTracer{
+		StartedConnection: func(local, remote net.Addr, srcConnID, destConnID logging.ConnectionID) {
+			mh.ConnectionStarted(time.Now())
+		},
+		// ReceivedLongHeaderPacket: func(eh *logging.ExtendedHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
+		// 	mh.PacketReceived(bc, f)
+		// },
+		// ReceivedShortHeaderPacket: func(sh *logging.ShortHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
+		// 	mh.PacketReceived(bc, f)
+		// },
+		// SentLongHeaderPacket: func(eh *logging.ExtendedHeader, bc logging.ByteCount, e logging.ECN, af *logging.AckFrame, f []logging.Frame) {
+		// 	mh.PacketSent(bc, f)
+		// },
+		// SentShortHeaderPacket: func(sh *logging.ShortHeader, bc logging.ByteCount, e logging.ECN, af *logging.AckFrame, f []logging.Frame) {
+		// 	mh.PacketSent(bc, f)
+		// },
+	}
+}

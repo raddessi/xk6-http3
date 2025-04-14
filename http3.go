@@ -1,19 +1,14 @@
 package http3
 
 import (
-	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
 
 	"github.com/grafana/sobek"
 	"github.com/quic-go/quic-go"
 	quichttp3 "github.com/quic-go/quic-go/http3"
-	"github.com/quic-go/quic-go/logging"
-	"github.com/quic-go/quic-go/qlog"
 
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/js/modules"
@@ -27,8 +22,8 @@ type (
 	RootModule struct{}
 
 	ModuleInstance struct {
-		vu      modules.VU
-		metrics *HTTP3Metrics
+		vu modules.VU
+		// metrics *HTTP3Metrics
 		client  *Client
 		exports *sobek.Object
 	}
@@ -47,14 +42,14 @@ func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	rt := vu.Runtime()
 	// sub, ch := vu.Events().Global.Subscribe(eventloop.EventLoop.)
 
-	metrics, err := RegisterMetrics(vu)
-	if err != nil {
-		log.Fatal(err)
-	}
+	// metrics, err := RegisterMetrics(vu)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
 	mi := &ModuleInstance{
-		vu:      vu,
-		metrics: metrics,
+		vu: vu,
+		// metrics: metrics,
 		exports: rt.NewObject(),
 	}
 
@@ -110,21 +105,21 @@ func (mi *ModuleInstance) getClient() *Client {
 func (mi *ModuleInstance) createHTTP3RoundTripper(insecure bool) *quichttp3.RoundTripper {
 	qconf := quic.Config{
 
-		Tracer: func(ctx context.Context, p logging.Perspective, connID quic.ConnectionID) *logging.ConnectionTracer {
-			tracers := make([]*logging.ConnectionTracer, 0)
-			tracers = append(tracers, NewTracer(mi.vu, mi.metrics))
-			if os.Getenv("HTTP3_QLOG") == "1" {
-				role := "server"
-				if p == logging.PerspectiveClient {
-					role = "client"
-				}
-				filename := fmt.Sprintf("./log_%s_%s.qlog", connID, role)
-				f, _ := os.Create(filename)
-				// TODO: handle the error
-				tracers = append(tracers, qlog.NewConnectionTracer(f, p, connID))
-			}
-			return logging.NewMultiplexedConnectionTracer(tracers...)
-		},
+		// Tracer: func(ctx context.Context, p logging.Perspective, connID quic.ConnectionID) *logging.ConnectionTracer {
+		// 	tracers := make([]*logging.ConnectionTracer, 0)
+		// 	tracers = append(tracers, NewTracer(mi.vu, mi.metrics))
+		// 	if os.Getenv("HTTP3_QLOG") == "1" {
+		// 		role := "server"
+		// 		if p == logging.PerspectiveClient {
+		// 			role = "client"
+		// 		}
+		// 		filename := fmt.Sprintf("./log_%s_%s.qlog", connID, role)
+		// 		f, _ := os.Create(filename)
+		// 		// TODO: handle the error
+		// 		tracers = append(tracers, qlog.NewConnectionTracer(f, p, connID))
+		// 	}
+		// 	return logging.NewMultiplexedConnectionTracer(tracers...)
+		// },
 	}
 
 	pool, err := x509.SystemCertPool()

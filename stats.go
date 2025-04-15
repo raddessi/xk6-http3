@@ -187,31 +187,42 @@ func (mh *metricHandler) handleFramesSent(frames []logging.Frame) {
 			}
 		}
 	}
-
 }
 
 func (mh *metricHandler) PacketReceived(bc logging.ByteCount, f []logging.Frame) {
 	mh.handleFramesReceived(f)
+
+	state := mh.vu.State()
+	commonTagsAndMeta := state.Tags.GetCurrentValues()
+
 	sample := metrics.Sample{
 		TimeSeries: metrics.TimeSeries{
 			Metric: mh.vu.State().BuiltinMetrics.DataReceived,
+			Tags:   commonTagsAndMeta.Tags,
 		},
-		Time:  time.Now(),
-		Value: float64(bc),
+		Metadata: commonTagsAndMeta.Metadata,
+		Time:     time.Now(),
+		Value:    float64(bc),
 	}
-	metrics.PushIfNotDone(mh.vu.Context(), mh.vu.State().Samples, sample)
+	metrics.PushIfNotDone(mh.vu.Context(), state.Samples, sample)
 }
 
 func (mh *metricHandler) PacketSent(bc logging.ByteCount, f []logging.Frame) {
 	mh.handleFramesSent(f)
+
+	state := mh.vu.State()
+	commonTagsAndMeta := state.Tags.GetCurrentValues()
+
 	sample := metrics.Sample{
 		TimeSeries: metrics.TimeSeries{
 			Metric: mh.vu.State().BuiltinMetrics.DataSent,
+			Tags:   commonTagsAndMeta.Tags,
 		},
-		Time:  time.Now(),
-		Value: float64(bc),
+		Metadata: commonTagsAndMeta.Metadata,
+		Time:     time.Now(),
+		Value:    float64(bc),
 	}
-	metrics.PushIfNotDone(mh.vu.Context(), mh.vu.State().Samples, sample)
+	metrics.PushIfNotDone(mh.vu.Context(), state.Samples, sample)
 }
 
 func NewTracer(vu modules.VU, http3Metrics *HTTP3Metrics) *logging.ConnectionTracer {
@@ -225,17 +236,17 @@ func NewTracer(vu modules.VU, http3Metrics *HTTP3Metrics) *logging.ConnectionTra
 		StartedConnection: func(local, remote net.Addr, srcConnID, destConnID logging.ConnectionID) {
 			mh.ConnectionStarted(time.Now())
 		},
-		// ReceivedLongHeaderPacket: func(eh *logging.ExtendedHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
-		// 	mh.PacketReceived(bc, f)
-		// },
-		// ReceivedShortHeaderPacket: func(sh *logging.ShortHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
-		// 	mh.PacketReceived(bc, f)
-		// },
-		// SentLongHeaderPacket: func(eh *logging.ExtendedHeader, bc logging.ByteCount, e logging.ECN, af *logging.AckFrame, f []logging.Frame) {
-		// 	mh.PacketSent(bc, f)
-		// },
-		// SentShortHeaderPacket: func(sh *logging.ShortHeader, bc logging.ByteCount, e logging.ECN, af *logging.AckFrame, f []logging.Frame) {
-		// 	mh.PacketSent(bc, f)
-		// },
+		ReceivedLongHeaderPacket: func(eh *logging.ExtendedHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
+			mh.PacketReceived(bc, f)
+		},
+		ReceivedShortHeaderPacket: func(sh *logging.ShortHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
+			mh.PacketReceived(bc, f)
+		},
+		SentLongHeaderPacket: func(eh *logging.ExtendedHeader, bc logging.ByteCount, e logging.ECN, af *logging.AckFrame, f []logging.Frame) {
+			mh.PacketSent(bc, f)
+		},
+		SentShortHeaderPacket: func(sh *logging.ShortHeader, bc logging.ByteCount, e logging.ECN, af *logging.AckFrame, f []logging.Frame) {
+			mh.PacketSent(bc, f)
+		},
 	}
 }

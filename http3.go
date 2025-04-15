@@ -136,7 +136,7 @@ func (mi *ModuleInstance) createHTTP3RoundTripper(insecure bool) *quichttp3.Roun
 			RootCAs:            pool,
 			InsecureSkipVerify: insecure,
 		},
-		QuicConfig: &qconf,
+		QUICConfig: &qconf,
 	}
 	return roundTripper
 }

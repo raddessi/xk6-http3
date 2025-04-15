@@ -40,34 +40,34 @@ type metricHandler struct {
 	streams map[int64]*streamMetrics
 }
 
-// func RegisterMetrics(vu modules.VU) (*HTTP3Metrics, error) {
-// 	var err error
-// 	registry := vu.InitEnv().Registry
-// 	m := &HTTP3Metrics{}
+func RegisterMetrics(vu modules.VU) (*HTTP3Metrics, error) {
+	var err error
+	registry := vu.InitEnv().Registry
+	m := &HTTP3Metrics{}
 
-// 	m.HTTP3ReqDuration, err = registry.NewMetric(HTTP3ReqDurationName, metrics.Trend, metrics.Time)
-// 	if err != nil {
-// 		return m, err
-// 	}
-// 	m.HTTP3ReqReceiving, err = registry.NewMetric(HTTP3ReqReceivingName, metrics.Trend, metrics.Time)
-// 	if err != nil {
-// 		return m, err
-// 	}
-// 	m.HTTP3ReqWaiting, err = registry.NewMetric(HTTP3ReqWaitingName, metrics.Trend, metrics.Time)
-// 	if err != nil {
-// 		return m, err
-// 	}
-// 	m.HTTP3ReqSending, err = registry.NewMetric(HTTP3ReqSendingName, metrics.Trend, metrics.Time)
-// 	if err != nil {
-// 		return m, err
-// 	}
-// 	m.HTTP3Reqs, err = registry.NewMetric(HTTP3ReqsName, metrics.Counter)
-// 	if err != nil {
-// 		return m, err
-// 	}
+	m.HTTP3ReqDuration, err = registry.NewMetric(HTTP3ReqDurationName, metrics.Trend, metrics.Time)
+	if err != nil {
+		return m, err
+	}
+	m.HTTP3ReqReceiving, err = registry.NewMetric(HTTP3ReqReceivingName, metrics.Trend, metrics.Time)
+	if err != nil {
+		return m, err
+	}
+	m.HTTP3ReqWaiting, err = registry.NewMetric(HTTP3ReqWaitingName, metrics.Trend, metrics.Time)
+	if err != nil {
+		return m, err
+	}
+	m.HTTP3ReqSending, err = registry.NewMetric(HTTP3ReqSendingName, metrics.Trend, metrics.Time)
+	if err != nil {
+		return m, err
+	}
+	m.HTTP3Reqs, err = registry.NewMetric(HTTP3ReqsName, metrics.Counter)
+	if err != nil {
+		return m, err
+	}
 
-// 	return m, nil
-// }
+	return m, nil
+}
 
 // func (mh *metricHandler) sendMetrics(streamID int64) {
 // 	streamMetrics := mh.getStreamMetrics(streamID, false)
@@ -138,81 +138,81 @@ func (mh *metricHandler) ConnectionStarted(t time.Time) {
 	//TODO: Handle it
 }
 
-// func (mh *metricHandler) handleFramesReceived(frames []logging.Frame) {
-// 	for _, frame := range frames {
-// 		switch f := frame.(type) {
-// 		case *logging.StreamFrame:
-// 			{
-// 				streamID := int64(f.StreamID)
-// 				streamMetrics := mh.getStreamMetrics(streamID, false)
-// 				if streamMetrics == nil {
-// 					return
-// 				}
-// 				streamMetrics.receivedBytes += int(f.Length)
-// 				if streamMetrics.responseStart.IsZero() {
-// 					streamMetrics.responseStart = time.Now()
-// 				}
-// 				if f.Fin {
-// 					streamMetrics.responseFin = time.Now()
-// 					// mh.sendMetrics(streamID)
-// 				}
-// 			}
-// 		}
-// 	}
-// }
+func (mh *metricHandler) handleFramesReceived(frames []logging.Frame) {
+	for _, frame := range frames {
+		switch f := frame.(type) {
+		case *logging.StreamFrame:
+			{
+				streamID := int64(f.StreamID)
+				streamMetrics := mh.getStreamMetrics(streamID, false)
+				if streamMetrics == nil {
+					return
+				}
+				streamMetrics.receivedBytes += int(f.Length)
+				if streamMetrics.responseStart.IsZero() {
+					streamMetrics.responseStart = time.Now()
+				}
+				if f.Fin {
+					streamMetrics.responseFin = time.Now()
+					// mh.sendMetrics(streamID)
+				}
+			}
+		}
+	}
+}
 
-// func (mh *metricHandler) getStreamMetrics(streamID int64, createIfNotFound bool) *streamMetrics {
-// 	now := time.Now()
-// 	if m, ok := mh.streams[streamID]; ok || !createIfNotFound {
-// 		return m
-// 	}
-// 	m := &streamMetrics{
-// 		requestStart: now,
-// 	}
-// 	mh.streams[streamID] = m
-// 	return m
-// }
+func (mh *metricHandler) getStreamMetrics(streamID int64, createIfNotFound bool) *streamMetrics {
+	now := time.Now()
+	if m, ok := mh.streams[streamID]; ok || !createIfNotFound {
+		return m
+	}
+	m := &streamMetrics{
+		requestStart: now,
+	}
+	mh.streams[streamID] = m
+	return m
+}
 
-// func (mh *metricHandler) handleFramesSent(frames []logging.Frame) {
-// 	for _, frame := range frames {
-// 		switch f := frame.(type) {
-// 		case *logging.StreamFrame:
-// 			{
-// 				streamID := int64(f.StreamID)
-// 				streamMetrics := mh.getStreamMetrics(streamID, true)
-// 				streamMetrics.sentBytes += int(f.Length)
-// 				if f.Fin {
-// 					streamMetrics.requestFin = time.Now()
-// 				}
-// 			}
-// 		}
-// 	}
+func (mh *metricHandler) handleFramesSent(frames []logging.Frame) {
+	for _, frame := range frames {
+		switch f := frame.(type) {
+		case *logging.StreamFrame:
+			{
+				streamID := int64(f.StreamID)
+				streamMetrics := mh.getStreamMetrics(streamID, true)
+				streamMetrics.sentBytes += int(f.Length)
+				if f.Fin {
+					streamMetrics.requestFin = time.Now()
+				}
+			}
+		}
+	}
 
-// }
+}
 
-// func (mh *metricHandler) PacketReceived(bc logging.ByteCount, f []logging.Frame) {
-// 	mh.handleFramesReceived(f)
-// 	sample := metrics.Sample{
-// 		TimeSeries: metrics.TimeSeries{
-// 			Metric: mh.vu.State().BuiltinMetrics.DataReceived,
-// 		},
-// 		Time:  time.Now(),
-// 		Value: float64(bc),
-// 	}
-// 	metrics.PushIfNotDone(mh.vu.Context(), mh.vu.State().Samples, sample)
-// }
+func (mh *metricHandler) PacketReceived(bc logging.ByteCount, f []logging.Frame) {
+	mh.handleFramesReceived(f)
+	sample := metrics.Sample{
+		TimeSeries: metrics.TimeSeries{
+			Metric: mh.vu.State().BuiltinMetrics.DataReceived,
+		},
+		Time:  time.Now(),
+		Value: float64(bc),
+	}
+	metrics.PushIfNotDone(mh.vu.Context(), mh.vu.State().Samples, sample)
+}
 
-// func (mh *metricHandler) PacketSent(bc logging.ByteCount, f []logging.Frame) {
-// 	mh.handleFramesSent(f)
-// 	sample := metrics.Sample{
-// 		TimeSeries: metrics.TimeSeries{
-// 			Metric: mh.vu.State().BuiltinMetrics.DataSent,
-// 		},
-// 		Time:  time.Now(),
-// 		Value: float64(bc),
-// 	}
-// 	metrics.PushIfNotDone(mh.vu.Context(), mh.vu.State().Samples, sample)
-// }
+func (mh *metricHandler) PacketSent(bc logging.ByteCount, f []logging.Frame) {
+	mh.handleFramesSent(f)
+	sample := metrics.Sample{
+		TimeSeries: metrics.TimeSeries{
+			Metric: mh.vu.State().BuiltinMetrics.DataSent,
+		},
+		Time:  time.Now(),
+		Value: float64(bc),
+	}
+	metrics.PushIfNotDone(mh.vu.Context(), mh.vu.State().Samples, sample)
+}
 
 func NewTracer(vu modules.VU, http3Metrics *HTTP3Metrics) *logging.ConnectionTracer {
 	mh := &metricHandler{

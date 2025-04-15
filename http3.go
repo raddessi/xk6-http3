@@ -47,14 +47,14 @@ func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	rt := vu.Runtime()
 	// sub, ch := vu.Events().Global.Subscribe(eventloop.EventLoop.)
 
-	// metrics, err := RegisterMetrics(vu)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
+	metrics, err := RegisterMetrics(vu)
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	mi := &ModuleInstance{
-		vu: vu,
-		// metrics: metrics,
+		vu:      vu,
+		metrics: metrics,
 		exports: rt.NewObject(),
 	}
 

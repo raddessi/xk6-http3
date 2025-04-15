@@ -45,7 +45,6 @@ func New() *RootModule {
 
 func (*RootModule) NewModuleInstance(vu modules.VU) modules.Instance {
 	rt := vu.Runtime()
-	// sub, ch := vu.Events().Global.Subscribe(eventloop.EventLoop.)
 
 	metrics, err := RegisterMetrics(vu)
 	if err != nil {

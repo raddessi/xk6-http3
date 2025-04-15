@@ -69,70 +69,70 @@ func RegisterMetrics(vu modules.VU) (*HTTP3Metrics, error) {
 	return m, nil
 }
 
-// func (mh *metricHandler) sendMetrics(streamID int64) {
-// 	streamMetrics := mh.getStreamMetrics(streamID, false)
-// 	if streamMetrics == nil {
-// 		return
-// 	}
-// 	mh.streams[streamID] = nil
-// 	http3ReqDuration := streamMetrics.responseFin.Sub(streamMetrics.requestStart)
-// 	http3ReqSending := streamMetrics.requestFin.Sub(streamMetrics.requestStart)
-// 	http3ReqWaiting := streamMetrics.responseStart.Sub(streamMetrics.requestFin)
-// 	http3ReqReceiving := streamMetrics.responseFin.Sub(streamMetrics.responseStart)
+func (mh *metricHandler) sendMetrics(streamID int64) {
+	streamMetrics := mh.getStreamMetrics(streamID, false)
+	if streamMetrics == nil {
+		return
+	}
+	mh.streams[streamID] = nil
+	http3ReqDuration := streamMetrics.responseFin.Sub(streamMetrics.requestStart)
+	http3ReqSending := streamMetrics.requestFin.Sub(streamMetrics.requestStart)
+	http3ReqWaiting := streamMetrics.responseStart.Sub(streamMetrics.requestFin)
+	http3ReqReceiving := streamMetrics.responseFin.Sub(streamMetrics.responseStart)
 
-// 	state := mh.vu.State()
-// 	commonTagsAndMeta := state.Tags.GetCurrentValues()
+	state := mh.vu.State()
+	commonTagsAndMeta := state.Tags.GetCurrentValues()
 
-// 	samples := metrics.ConnectedSamples{
-// 		Samples: []metrics.Sample{
-// 			{
-// 				TimeSeries: metrics.TimeSeries{
-// 					Metric: mh.metrics.HTTP3ReqDuration,
-// 					Tags:   commonTagsAndMeta.Tags,
-// 				},
-// 				Metadata: commonTagsAndMeta.Metadata,
-// 				Time:     streamMetrics.responseFin,
-// 				Value:    metrics.D(http3ReqDuration),
-// 			},
-// 			{
-// 				TimeSeries: metrics.TimeSeries{
-// 					Metric: mh.metrics.HTTP3ReqSending,
-// 					Tags:   commonTagsAndMeta.Tags,
-// 				},
-// 				Metadata: commonTagsAndMeta.Metadata,
-// 				Time:     streamMetrics.requestFin,
-// 				Value:    metrics.D(http3ReqSending),
-// 			},
-// 			{
-// 				TimeSeries: metrics.TimeSeries{
-// 					Metric: mh.metrics.HTTP3ReqWaiting,
-// 					Tags:   commonTagsAndMeta.Tags,
-// 				},
-// 				Metadata: commonTagsAndMeta.Metadata,
-// 				Time:     streamMetrics.responseStart,
-// 				Value:    metrics.D(http3ReqWaiting),
-// 			},
-// 			{
-// 				TimeSeries: metrics.TimeSeries{
-// 					Metric: mh.metrics.HTTP3ReqReceiving,
-// 					Tags:   commonTagsAndMeta.Tags,
-// 				},
-// 				Metadata: commonTagsAndMeta.Metadata,
-// 				Time:     streamMetrics.responseFin,
-// 				Value:    metrics.D(http3ReqReceiving),
-// 			},
-// 			{
-// 				TimeSeries: metrics.TimeSeries{
-// 					Metric: mh.metrics.HTTP3Reqs,
-// 					Tags:   commonTagsAndMeta.Tags,
-// 				},
-// 				Metadata: commonTagsAndMeta.Metadata,
-// 				Time:     streamMetrics.responseFin,
-// 				Value:    1,
-// 			},
-// 		}}
-// 	mh.vu.State().Samples <- samples
-// }
+	samples := metrics.ConnectedSamples{
+		Samples: []metrics.Sample{
+			{
+				TimeSeries: metrics.TimeSeries{
+					Metric: mh.metrics.HTTP3ReqDuration,
+					Tags:   commonTagsAndMeta.Tags,
+				},
+				Metadata: commonTagsAndMeta.Metadata,
+				Time:     streamMetrics.responseFin,
+				Value:    metrics.D(http3ReqDuration),
+			},
+			{
+				TimeSeries: metrics.TimeSeries{
+					Metric: mh.metrics.HTTP3ReqSending,
+					Tags:   commonTagsAndMeta.Tags,
+				},
+				Metadata: commonTagsAndMeta.Metadata,
+				Time:     streamMetrics.requestFin,
+				Value:    metrics.D(http3ReqSending),
+			},
+			{
+				TimeSeries: metrics.TimeSeries{
+					Metric: mh.metrics.HTTP3ReqWaiting,
+					Tags:   commonTagsAndMeta.Tags,
+				},
+				Metadata: commonTagsAndMeta.Metadata,
+				Time:     streamMetrics.responseStart,
+				Value:    metrics.D(http3ReqWaiting),
+			},
+			{
+				TimeSeries: metrics.TimeSeries{
+					Metric: mh.metrics.HTTP3ReqReceiving,
+					Tags:   commonTagsAndMeta.Tags,
+				},
+				Metadata: commonTagsAndMeta.Metadata,
+				Time:     streamMetrics.responseFin,
+				Value:    metrics.D(http3ReqReceiving),
+			},
+			{
+				TimeSeries: metrics.TimeSeries{
+					Metric: mh.metrics.HTTP3Reqs,
+					Tags:   commonTagsAndMeta.Tags,
+				},
+				Metadata: commonTagsAndMeta.Metadata,
+				Time:     streamMetrics.responseFin,
+				Value:    1,
+			},
+		}}
+	mh.vu.State().Samples <- samples
+}
 
 func (mh *metricHandler) ConnectionStarted(t time.Time) {
 	//TODO: Handle it
@@ -154,7 +154,7 @@ func (mh *metricHandler) handleFramesReceived(frames []logging.Frame) {
 				}
 				if f.Fin {
 					streamMetrics.responseFin = time.Now()
-					// mh.sendMetrics(streamID)
+					mh.sendMetrics(streamID)
 				}
 			}
 		}

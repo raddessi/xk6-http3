@@ -146,7 +146,7 @@ func (mh *metricHandler) handleFramesReceived(frames []logging.Frame) {
 				streamID := int64(f.StreamID)
 				streamMetrics := mh.getStreamMetrics(streamID, false)
 				if streamMetrics == nil {
-					return
+					continue // Skip this frame only, not the whole function
 				}
 				streamMetrics.receivedBytes += int(f.Length)
 				if streamMetrics.responseStart.IsZero() {
@@ -180,6 +180,9 @@ func (mh *metricHandler) handleFramesSent(frames []logging.Frame) {
 			{
 				streamID := int64(f.StreamID)
 				streamMetrics := mh.getStreamMetrics(streamID, true)
+				if streamMetrics == nil {
+					continue // Skip this frame if metrics are nil
+				}
 				streamMetrics.sentBytes += int(f.Length)
 				if f.Fin {
 					streamMetrics.requestFin = time.Now()
@@ -239,6 +242,7 @@ func NewTracer(vu modules.VU, http3Metrics *HTTP3Metrics) *logging.ConnectionTra
 		ReceivedLongHeaderPacket: func(eh *logging.ExtendedHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
 			mh.PacketReceived(bc, f)
 		},
+		// ReceivedShortHeaderPacket is unstable under heavy load (10k vus)
 		ReceivedShortHeaderPacket: func(sh *logging.ShortHeader, bc logging.ByteCount, e logging.ECN, f []logging.Frame) {
 			mh.PacketReceived(bc, f)
 		},

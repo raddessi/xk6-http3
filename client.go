@@ -56,7 +56,7 @@ func (c *Client) Request(method string, url sobek.Value, args ...sobek.Value) (*
 
 	resp, err := c.makeRequest(c.moduleInstance.vu.Context(), state, req)
 	if err != nil {
-		return nil, err
+		return c.handleMakeRequestError(err)
 	}
 	c.processResponse(resp, req.ResponseType)
 	return c.responseFromHTTPext(resp), nil
@@ -132,8 +132,41 @@ func (c *Client) makeRequest(ctx context.Context, state *lib.State, preq *httpex
 	}
 
 	resp, err := c.client.Do(preq.Req)
+	// if err != nil {
+	// 	fmt.Println("ZZZ1")
+	// 	printTypeAndValue(err)
+	// 	var code errorcodes.ErrCode
+	// 	httpresp := httpext.NewResponse()
+
+	// 	// Check if it's a URL error
+	// 	if urlErr, ok := err.(*url.Error); ok {
+	// 		fmt.Printf("URL Error: %v\n", urlErr.Err)
+	// 		fmt.Printf("Operation: %s\n", urlErr.Op)
+	// 		fmt.Printf("URL: %s\n", urlErr.URL)
+	// 		// Handle accordingly
+
+	// 		err = fmt.Errorf(
+	// 			"TEST %s",
+	// 			err,
+	// 		)
+	// 		return nil, err
+	// 	}
+
+	// 	code, _ = e.ErrorCodeForError(err)
+	// 	httpresp.Status = int(code)
+	// 	// return resp, err
+	// 	return nil, err
+	// }
 
 	body, err := readResponseBody(c.moduleInstance.vu.State(), preq.ResponseType, resp, err)
+	// if err != nil {
+	// 	fmt.Println("ZZZ2")
+	// 	var code errorcodes.ErrCode
+	// 	httpresp := httpext.NewResponse()
+	// 	code, _ = e.ErrorCodeForError(err)
+	// 	httpresp.Status = int(code)
+	// 	return httpresp, err
+	// }
 	if err != nil {
 		return nil, err
 	}
@@ -164,6 +197,18 @@ func (c *Client) makeRequest(ctx context.Context, state *lib.State, preq *httpex
 	}
 
 	return httpresp, nil
+}
+
+func printTypeAndValue(i interface{}) {
+	// Type switch to determine actual type
+	switch v := i.(type) {
+	case int:
+		fmt.Printf("Integer: Type=int, Value=%d\n", v)
+	case string:
+		fmt.Printf("String: Type=string, Value=%s\n", v)
+	default:
+		fmt.Printf("Unknown: Type=%T, Value=%v\n", v, v)
+	}
 }
 
 // Matches non-compliant io.Closer implementations (e.g. zstd.Decoder)
@@ -307,6 +352,23 @@ func (c *Client) handleParseRequestError(err error) (*Response, error) {
 		r.ErrorCode = int(k6e.Code)
 	}
 	return &Response{Response: r, client: c}, nil
+}
+
+func (c *Client) handleMakeRequestError(err error) (*Response, error) {
+	state := c.moduleInstance.vu.State()
+
+	if state.Options.Throw.Bool {
+		return nil, err
+	}
+	state.Logger.WithField("error", err).Warn("Request Failed")
+	r := httpext.NewResponse()
+	r.Error = err.Error()
+	var k6e httpext.K6Error
+	if errors.As(err, &k6e) {
+		r.ErrorCode = int(k6e.Code)
+	}
+	return nil, nil
+	// return &Response{Response: r, client: c}, nil
 }
 
 // TODO: break this function up

@@ -134,44 +134,15 @@ func (c *Client) makeRequest(ctx context.Context, state *lib.State, preq *httpex
 	}
 
 	resp, err := c.client.Do(preq.Req)
-	// testing better error handling and metric collection
-	// if err != nil {
-	//      fmt.Println("ZZZ1")
-	//      printTypeAndValue(err)
-	//      var code errorcodes.ErrCode
-	//      httpresp := httpext.NewResponse()
-	//      // Check if it's a URL error
-	//      if urlErr, ok := err.(*url.Error); ok {
-	//              fmt.Printf("URL Error: %v\n", urlErr.Err)
-	//              fmt.Printf("Operation: %s\n", urlErr.Op)
-	//              fmt.Printf("URL: %s\n", urlErr.URL)
-	//              // Handle accordingly
-	//              err = fmt.Errorf(
-	//                      "TEST %s",
-	//                      err,
-	//              )
-	//              return nil, err
-	//      }
-	//      code, _ = e.ErrorCodeForError(err)
-	//      httpresp.Status = int(code)
-	//      // return resp, err
-	//      return nil, err
-	// }
+	if err != nil {
+		return nil, err
+	}
 
 	if transport, ok := c.client.Transport.(*quichttp3.Transport); ok {
 		transport.Close()
 	}
 
 	body, err := readResponseBody(c.moduleInstance.vu.State(), preq.ResponseType, resp, err)
-	// testing better error handling and metric collection
-	// if err != nil {
-	//      fmt.Println("ZZZ2")
-	//      var code errorcodes.ErrCode
-	//      httpresp := httpext.NewResponse()
-	//      code, _ = e.ErrorCodeForError(err)
-	//      httpresp.Status = int(code)
-	//      return httpresp, err
-	// }
 	if err != nil {
 		return nil, err
 	}
@@ -202,18 +173,6 @@ func (c *Client) makeRequest(ctx context.Context, state *lib.State, preq *httpex
 	}
 
 	return httpresp, nil
-}
-
-func printTypeAndValue(i interface{}) {
-	// Type switch to determine actual type
-	switch v := i.(type) {
-	case int:
-		fmt.Printf("Integer: Type=int, Value=%d\n", v)
-	case string:
-		fmt.Printf("String: Type=string, Value=%s\n", v)
-	default:
-		fmt.Printf("Unknown: Type=%T, Value=%v\n", v, v)
-	}
 }
 
 // Matches non-compliant io.Closer implementations (e.g. zstd.Decoder)

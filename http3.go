@@ -9,7 +9,6 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/grafana/sobek"
 	"github.com/quic-go/quic-go"
@@ -135,11 +134,7 @@ func getReuseportUDPConn() (net.PacketConn, error) {
 }
 
 func (mi *ModuleInstance) createHTTP3Transport(insecure bool) *quichttp3.Transport {
-	var keepAlivePeriod time.Duration
 	qconf := quic.Config{
-		// Force connections to be closed very quickly after use
-		// MaxIdleTimeout: 1 * time.Nanosecond,
-		KeepAlivePeriod: keepAlivePeriod,
 		Tracer: func(ctx context.Context, p logging.Perspective, connID quic.ConnectionID) *logging.ConnectionTracer {
 			tracers := make([]*logging.ConnectionTracer, 0)
 			tracers = append(tracers, NewTracer(mi.vu, mi.metrics))

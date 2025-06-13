@@ -20,6 +20,7 @@ import (
 	"github.com/andybalholm/brotli"
 	"github.com/grafana/sobek"
 	"github.com/klauspost/compress/zstd"
+	quichttp3 "github.com/quic-go/quic-go/http3"
 	"go.k6.io/k6/js/common"
 	k6http "go.k6.io/k6/js/modules/k6/http"
 	"go.k6.io/k6/lib"
@@ -59,6 +60,7 @@ func (c *Client) Request(method string, url sobek.Value, args ...sobek.Value) (*
 		return c.handleMakeRequestError(err)
 	}
 	c.processResponse(resp, req.ResponseType)
+
 	return c.responseFromHTTPext(resp), nil
 }
 
@@ -132,40 +134,43 @@ func (c *Client) makeRequest(ctx context.Context, state *lib.State, preq *httpex
 	}
 
 	resp, err := c.client.Do(preq.Req)
+	// testing better error handling and metric collection
 	// if err != nil {
-	// 	fmt.Println("ZZZ1")
-	// 	printTypeAndValue(err)
-	// 	var code errorcodes.ErrCode
-	// 	httpresp := httpext.NewResponse()
-
-	// 	// Check if it's a URL error
-	// 	if urlErr, ok := err.(*url.Error); ok {
-	// 		fmt.Printf("URL Error: %v\n", urlErr.Err)
-	// 		fmt.Printf("Operation: %s\n", urlErr.Op)
-	// 		fmt.Printf("URL: %s\n", urlErr.URL)
-	// 		// Handle accordingly
-
-	// 		err = fmt.Errorf(
-	// 			"TEST %s",
-	// 			err,
-	// 		)
-	// 		return nil, err
-	// 	}
-
-	// 	code, _ = e.ErrorCodeForError(err)
-	// 	httpresp.Status = int(code)
-	// 	// return resp, err
-	// 	return nil, err
+	//      fmt.Println("ZZZ1")
+	//      printTypeAndValue(err)
+	//      var code errorcodes.ErrCode
+	//      httpresp := httpext.NewResponse()
+	//      // Check if it's a URL error
+	//      if urlErr, ok := err.(*url.Error); ok {
+	//              fmt.Printf("URL Error: %v\n", urlErr.Err)
+	//              fmt.Printf("Operation: %s\n", urlErr.Op)
+	//              fmt.Printf("URL: %s\n", urlErr.URL)
+	//              // Handle accordingly
+	//              err = fmt.Errorf(
+	//                      "TEST %s",
+	//                      err,
+	//              )
+	//              return nil, err
+	//      }
+	//      code, _ = e.ErrorCodeForError(err)
+	//      httpresp.Status = int(code)
+	//      // return resp, err
+	//      return nil, err
 	// }
 
+	if transport, ok := c.client.Transport.(*quichttp3.Transport); ok {
+		transport.Close()
+	}
+
 	body, err := readResponseBody(c.moduleInstance.vu.State(), preq.ResponseType, resp, err)
+	// testing better error handling and metric collection
 	// if err != nil {
-	// 	fmt.Println("ZZZ2")
-	// 	var code errorcodes.ErrCode
-	// 	httpresp := httpext.NewResponse()
-	// 	code, _ = e.ErrorCodeForError(err)
-	// 	httpresp.Status = int(code)
-	// 	return httpresp, err
+	//      fmt.Println("ZZZ2")
+	//      var code errorcodes.ErrCode
+	//      httpresp := httpext.NewResponse()
+	//      code, _ = e.ErrorCodeForError(err)
+	//      httpresp.Status = int(code)
+	//      return httpresp, err
 	// }
 	if err != nil {
 		return nil, err

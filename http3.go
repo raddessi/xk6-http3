@@ -6,14 +6,17 @@ import (
 	"crypto/x509"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/grafana/sobek"
 	"github.com/quic-go/quic-go"
 	quichttp3 "github.com/quic-go/quic-go/http3"
 	"github.com/quic-go/quic-go/logging"
 	"github.com/quic-go/quic-go/qlog"
+	"golang.org/x/sys/unix"
 
 	"go.k6.io/k6/js/common"
 	"go.k6.io/k6/js/modules"
@@ -99,16 +102,44 @@ func (mi *ModuleInstance) getClient() *Client {
 				CheckRedirect: func(req *http.Request, via []*http.Request) error {
 					return http.ErrUseLastResponse
 				},
-				Transport: mi.createHTTP3RoundTripper(mi.vu.State().TLSConfig.InsecureSkipVerify),
+				Transport: mi.createHTTP3Transport(mi.vu.State().TLSConfig.InsecureSkipVerify),
+				Jar:       nil,
 			},
 		}
 	}
 	return mi.client
 }
 
-func (mi *ModuleInstance) createHTTP3RoundTripper(insecure bool) *quichttp3.RoundTripper {
-	qconf := quic.Config{
+// Create a function to get a UDP connection with SO_REUSEPORT
+func getReuseportUDPConn() (net.PacketConn, error) {
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{Port: 0})
+	if err != nil {
+		return nil, err
+	}
 
+	syscallConn, err := conn.SyscallConn()
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	err = syscallConn.Control(func(fd uintptr) {
+		err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1)
+	})
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+
+	return conn, nil
+}
+
+func (mi *ModuleInstance) createHTTP3Transport(insecure bool) *quichttp3.Transport {
+	var keepAlivePeriod time.Duration
+	qconf := quic.Config{
+		// Force connections to be closed very quickly after use
+		// MaxIdleTimeout: 1 * time.Nanosecond,
+		KeepAlivePeriod: keepAlivePeriod,
 		Tracer: func(ctx context.Context, p logging.Perspective, connID quic.ConnectionID) *logging.ConnectionTracer {
 			tracers := make([]*logging.ConnectionTracer, 0)
 			tracers = append(tracers, NewTracer(mi.vu, mi.metrics))
@@ -130,14 +161,33 @@ func (mi *ModuleInstance) createHTTP3RoundTripper(insecure bool) *quichttp3.Roun
 	if err != nil {
 		log.Fatal(err)
 	}
-	roundTripper := &quichttp3.RoundTripper{
+	transport := &quichttp3.Transport{
 		TLSClientConfig: &tls.Config{
 			RootCAs:            pool,
 			InsecureSkipVerify: insecure,
 		},
 		QUICConfig: &qconf,
+		Dial: func(ctx context.Context, addr string, tlsCfg *tls.Config, cfg *quic.Config) (quic.EarlyConnection, error) {
+			// Parse the address properly
+			udpAddr, err := net.ResolveUDPAddr("udp", addr)
+			if err != nil {
+				return nil, err
+			}
+
+			// Create a fresh connection with SO_REUSEPORT for each dial
+			udpConn, err := getReuseportUDPConn()
+			if err != nil {
+				return nil, err
+			}
+
+			// Update: Remove the hostname parameter as it's not expected
+			// The correct signature is:
+			// context, connection, remoteAddr, TLS config, QUIC config
+			return quic.DialEarly(ctx, udpConn, udpAddr, tlsCfg, cfg)
+		},
 	}
-	return roundTripper
+
+	return transport
 }
 
 func (mi *ModuleInstance) Exports() modules.Exports {

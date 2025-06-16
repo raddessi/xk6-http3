@@ -138,8 +138,10 @@ func (c *Client) makeRequest(ctx context.Context, state *lib.State, preq *httpex
 		return nil, err
 	}
 
-	if transport, ok := c.client.Transport.(*quichttp3.Transport); ok {
-		transport.Close()
+	if state.Options.NoConnectionReuse.Bool {
+		if transport, ok := c.client.Transport.(*quichttp3.Transport); ok {
+			transport.Close()
+		}
 	}
 
 	body, err := readResponseBody(c.moduleInstance.vu.State(), preq.ResponseType, resp, err)
